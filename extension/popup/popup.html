@@ -5,8 +5,23 @@
   <link rel="stylesheet" href="popup.css">
 </head>
 <body>
-  <h2>LinkedIn CRM</h2>
-  <p>Navigate to a LinkedIn profile to add notes.</p>
+  <div class="popup-content">
+    <h2>LinkedIn CRM</h2>
+    
+    <div id="feed-controls" style="display: none;">
+      <div class="toggle-container">
+        <label class="switch">
+          <input type="checkbox" id="distraction-free">
+          <span class="slider round"></span>
+        </label>
+        <span class="toggle-label">Distraction Free Mode</span>
+      </div>
+    </div>
+    
+    <div id="other-page">
+      <p>Navigate to a LinkedIn profile to add notes or to feed to enable distraction-free mode.</p>
+    </div>
+  </div>
   <script src="popup.js"></script>
 </body>
 </html> 
