@@ -238,6 +238,11 @@ def handle_notes():
     try:
         if request.method == 'POST':
             data = request.json
+            recheck_date = data.get('recheck_date')
+            # Convert 'null' string or None to NULL in database
+            if recheck_date in ['null', '', None]:
+                recheck_date = None
+                
             cur.execute('''
                 UPDATE profiles 
                 SET notes = %s,
@@ -248,7 +253,7 @@ def handle_notes():
             ''', (
                 data['notes'], 
                 data.get('category'), 
-                data.get('recheck_date'),
+                recheck_date,  # This will now be None if no date is set
                 data['profile_url']
             ))
             conn.commit()
@@ -257,7 +262,7 @@ def handle_notes():
         elif request.method == 'GET':
             profile_url = request.args.get('profile_url')
             cur.execute('''
-                SELECT notes, category, recheck_date 
+                SELECT notes, category, recheck_date, first_name, last_name 
                 FROM profiles 
                 WHERE profile_url = %s
             ''', (profile_url,))
@@ -267,9 +272,11 @@ def handle_notes():
                 return jsonify({
                     'notes': result['notes'] or '',
                     'category': result['category'] or '',
-                    'recheck_date': result['recheck_date'].isoformat() if result['recheck_date'] else ''
+                    'recheck_date': result['recheck_date'].isoformat() if result['recheck_date'] else None,
+                    'first_name': result['first_name'] or '',
+                    'last_name': result['last_name'] or ''
                 })
-            return jsonify({'notes': '', 'category': '', 'recheck_date': ''})
+            return jsonify({})  # Return empty object if no profile found
             
     finally:
         cur.close()
@@ -281,16 +288,49 @@ def get_next_profile():
     cur = conn.cursor(cursor_factory=DictCursor)
     
     try:
-        # Get all profiles
-        cur.execute('SELECT profile_url FROM profiles')
-        profiles = cur.fetchall()
-        
-        if not profiles:
-            return jsonify({'error': 'No profiles found'}), 404
-        
-        # Select a random profile
-        random_profile = random.choice(profiles)['profile_url']
-        return jsonify({'next_profile_url': random_profile})
+        # 1. First priority: Profiles that need recheck today
+        cur.execute('''
+            SELECT profile_url 
+            FROM profiles 
+            WHERE recheck_date <= CURRENT_DATE
+            ORDER BY recheck_date ASC
+            LIMIT 1
+        ''')
+        result = cur.fetchone()
+        if result:
+            return jsonify({'next_profile_url': result['profile_url']})
+
+        # 2. Second priority: Uncategorized profiles, newest connections first
+        cur.execute('''
+            SELECT profile_url 
+            FROM profiles 
+            WHERE category IS NULL
+            AND connection_since IS NOT NULL
+            ORDER BY connection_since DESC
+            LIMIT 1
+        ''')
+        result = cur.fetchone()
+        if result:
+            return jsonify({'next_profile_url': result['profile_url']})
+
+        # 3. Third priority: Random network or lead without recheck date
+        cur.execute('''
+            SELECT profile_url 
+            FROM profiles 
+            WHERE category IN ('network', 'lead')
+            AND recheck_date IS NULL
+            ORDER BY RANDOM()
+            LIMIT 1
+        ''')
+        result = cur.fetchone()
+        if result:
+            return jsonify({'next_profile_url': result['profile_url']})
+
+        # If no profiles match any criteria, return error
+        return jsonify({
+            'error': 'No profiles found matching the prioritization criteria',
+            'message': 'All profiles have been categorized and scheduled for recheck'
+        }), 404
         
     finally:
         cur.close()
@@ -416,6 +456,35 @@ def backup_database():
         if 'conn' in locals():
             conn.close()
         print("Database connection closed")
+
+@app.route('/update-name', methods=['POST'])
+def update_name():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    
+    try:
+        data = request.json
+        field = data['field']
+        if field not in ['first_name', 'last_name']:
+            return jsonify({'error': 'Invalid field'}), 400
+            
+        cur.execute(f'''
+            UPDATE profiles 
+            SET {field} = %s,
+                updated_at = CURRENT_TIMESTAMP
+            WHERE profile_url = %s
+        ''', (data['value'], data['profile_url']))
+        
+        conn.commit()
+        return jsonify({'status': 'success'})
+        
+    except Exception as e:
+        print(f"Error updating name: {str(e)}")
+        return jsonify({'error': str(e)}), 500
+        
+    finally:
+        cur.close()
+        conn.close()
 
 if __name__ == '__main__':
     init_db()  # Initialize database on startup

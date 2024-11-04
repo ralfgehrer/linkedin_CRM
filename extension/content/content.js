@@ -1,18 +1,41 @@
-function getProfileInfo() {
-  return new Promise((resolve) => {
-    const profileUrl = window.location.href;
-    // Strip the linkedin.com part and clean the URL
-    const cleanUrl = profileUrl
-      .replace('https://www.linkedin.com/in/', '')
-      .replace('https://linkedin.com/in/', '')
-      .split('?')[0] // Remove query parameters
-      .split('/')[0]; // Remove any trailing paths
+async function getProfileInfo() {
+  const profileUrl = window.location.href;
+  // Strip the linkedin.com part and clean the URL
+  const cleanUrl = profileUrl
+    .replace('https://www.linkedin.com/in/', '')
+    .replace('https://linkedin.com/in/', '')
+    .split('?')[0] // Remove query parameters
+    .split('/')[0]; // Remove any trailing paths
+  
+  // Check if profile exists in CRM
+  try {
+    const response = await fetch(`http://localhost:5000/notes?profile_url=${encodeURIComponent(profileUrl)}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch profile info');
+    }
     
-    resolve({
+    const data = await response.json();
+    
+    // Check if profile exists in database by checking if we got any data back
+    const profileExists = Object.keys(data).length > 0;
+    
+    return {
       profileUrl,
-      cleanUrl
-    });
-  });
+      cleanUrl,
+      inCRM: profileExists,
+      firstName: data.first_name || '',
+      lastName: data.last_name || ''
+    };
+  } catch (error) {
+    console.error('Error checking profile:', error);
+    return {
+      profileUrl,
+      cleanUrl,
+      inCRM: false,
+      firstName: '',
+      lastName: ''
+    };
+  }
 }
 
 function showError(message) {
@@ -45,7 +68,20 @@ async function createCRMOverlay() {
     overlay.innerHTML = `
       <div class="crm-header">
         <h3>CRM Notes</h3>
-        <div class="profile-info">Profile: ${profileInfo.cleanUrl}</div>
+        <div class="profile-info">
+          ${profileInfo.inCRM ? `
+            <div class="name-fields">
+              <span class="editable-field" id="first-name" title="Double click to edit">${profileInfo.firstName}</span>
+              <span class="editable-field" id="last-name" title="Double click to edit">${profileInfo.lastName}</span>
+            </div>
+          ` : `
+            <div class="not-in-crm">
+              <span class="red-dot"></span>
+              <span class="red-text">Not in CRM</span>
+            </div>
+          `}
+          <div class="profile-url">Profile: ${profileInfo.cleanUrl}</div>
+        </div>
       </div>
       <div class="crm-content">
         <textarea id="crm-notes" placeholder="Add notes for this profile..."></textarea>
@@ -65,6 +101,7 @@ async function createCRMOverlay() {
           <button class="recheck-btn" data-days="7">1 Week</button>
           <button class="recheck-btn" data-days="30">1 Month</button>
           <button class="recheck-btn custom" id="custom-recheck">Custom</button>
+          <button class="recheck-btn none" id="no-recheck">None</button>
           <input type="date" id="custom-date" style="display: none;">
         </div>
 
@@ -91,15 +128,25 @@ async function createCRMOverlay() {
     // Add event listeners for recheck buttons
     document.querySelectorAll('.recheck-btn').forEach(button => {
       button.addEventListener('click', () => {
+        // Remove active class from all recheck buttons
+        document.querySelectorAll('.recheck-btn').forEach(btn => 
+          btn.classList.remove('active'));
+        
         if (button.id === 'custom-recheck') {
           const dateInput = document.getElementById('custom-date');
           dateInput.style.display = dateInput.style.display === 'none' ? 'block' : 'none';
           return;
         }
+        
+        if (button.id === 'no-recheck') {
+          // Set recheck date to null/empty
+          const recheckInfo = document.getElementById('recheck-info');
+          recheckInfo.textContent = 'No recheck scheduled';
+          recheckInfo.dataset.date = null;
+          button.classList.add('active');
+          return;
+        }
 
-        // Remove active class from all recheck buttons
-        document.querySelectorAll('.recheck-btn').forEach(btn => 
-          btn.classList.remove('active'));
         // Add active class to clicked button
         button.classList.add('active');
 
@@ -286,6 +333,72 @@ async function createCRMOverlay() {
     }
 
     document.getElementById('save-and-next').addEventListener('click', saveAndNavigateToNext);
+
+    // Add event listeners for editable fields
+    if (profileInfo.inCRM) {
+      ['first-name', 'last-name'].forEach(fieldId => {
+        const field = document.getElementById(fieldId);
+        field.addEventListener('dblclick', function() {
+          const currentValue = this.textContent;
+          const input = document.createElement('input');
+          input.value = currentValue;
+          input.className = 'editable-input';
+          
+          // Replace span with input
+          this.parentNode.replaceChild(input, this);
+          input.focus();
+          
+          // Handle save on enter or blur
+          const saveEdit = async () => {
+            const newValue = input.value.trim();
+            const span = document.createElement('span');
+            span.className = 'editable-field';
+            span.id = fieldId;
+            span.title = 'Double click to edit';
+            span.textContent = newValue;
+            
+            // Save to backend
+            try {
+              const response = await fetch('http://localhost:5000/update-name', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  profile_url: profileInfo.profileUrl,
+                  field: fieldId === 'first-name' ? 'first_name' : 'last_name',
+                  value: newValue
+                })
+              });
+              
+              if (!response.ok) throw new Error('Failed to update name');
+              
+            } catch (error) {
+              console.error('Error updating name:', error);
+              // Show error but keep the new value
+            }
+            
+            input.parentNode.replaceChild(span, input);
+            // Reattach double click listener
+            span.addEventListener('dblclick', field.ondblclick);
+          };
+          
+          input.addEventListener('blur', saveEdit);
+          input.addEventListener('keyup', (e) => {
+            if (e.key === 'Enter') saveEdit();
+            if (e.key === 'Escape') {
+              const span = document.createElement('span');
+              span.className = 'editable-field';
+              span.id = fieldId;
+              span.title = 'Double click to edit';
+              span.textContent = currentValue;
+              input.parentNode.replaceChild(span, input);
+              span.addEventListener('dblclick', field.ondblclick);
+            }
+          });
+        });
+      });
+    }
 
   } catch (error) {
     console.error('Error setting up CRM overlay:', error);
