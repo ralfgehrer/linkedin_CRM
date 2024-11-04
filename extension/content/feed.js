@@ -1,6 +1,6 @@
 function createFeedOverlay() {
-  const overlay = document.createElement('div');
-  overlay.id = 'distraction-free-overlay';
+  const overlay = document.createElement("div");
+  overlay.id = "distraction-free-overlay";
   overlay.style.cssText = `
     position: absolute;
     top: 0;
@@ -20,7 +20,7 @@ function createFeedOverlay() {
     transition: opacity 0.3s ease;
   `;
 
-  const content = document.createElement('div');
+  const content = document.createElement("div");
   content.style.cssText = `
     color: white;
     font-size: 72px;
@@ -31,48 +31,49 @@ function createFeedOverlay() {
     font-weight: 300;
     margin-top: 160px;
   `;
-  
+
   // Load Google Font
-  const fontLink = document.createElement('link');
-  fontLink.href = 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@300&display=swap';
-  fontLink.rel = 'stylesheet';
+  const fontLink = document.createElement("link");
+  fontLink.href =
+    "https://fonts.googleapis.com/css2?family=Playfair+Display:wght@300&display=swap";
+  fontLink.rel = "stylesheet";
   document.head.appendChild(fontLink);
-  
-  content.textContent = 'Focus';
-  
+
+  content.textContent = "Focus";
+
   overlay.appendChild(content);
   return overlay;
 }
 
 function toggleFeedOverlay(enabled) {
-  const feedContainer = document.querySelector('main.scaffold-layout__main');
+  const feedContainer = document.querySelector("main.scaffold-layout__main");
   if (!feedContainer) return;
-  
-  let overlay = document.getElementById('distraction-free-overlay');
-  
+
+  let overlay = document.getElementById("distraction-free-overlay");
+
   if (enabled) {
     if (!overlay) {
       overlay = createFeedOverlay();
-      feedContainer.style.position = 'relative';
+      feedContainer.style.position = "relative";
       feedContainer.appendChild(overlay);
     }
-    overlay.style.opacity = '1';
+    overlay.style.opacity = "1";
   } else if (overlay) {
-    overlay.style.opacity = '0';
+    overlay.style.opacity = "0";
     setTimeout(() => overlay.remove(), 300);
   }
 }
 
 // Listen for messages from popup
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
-  if (request.type === 'toggleDistractionFree') {
+  if (request.type === "toggleDistractionFree") {
     toggleFeedOverlay(request.enabled);
   }
 });
 
 // Check initial state
-chrome.storage.local.get(['distractionFree'], function(result) {
+chrome.storage.local.get(["distractionFree"], function (result) {
   if (result.distractionFree) {
     toggleFeedOverlay(true);
   }
-}); 
+});
