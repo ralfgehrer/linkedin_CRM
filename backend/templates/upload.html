@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LinkedIn CRM - Data Upload</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .upload-container {
+            border: 2px dashed #ccc;
+            padding: 20px;
+            text-align: center;
+            margin: 20px 0;
+            border-radius: 5px;
+        }
+        .upload-container.dragover {
+            background-color: #e1f5fe;
+            border-color: #0288d1;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 15px;
+            border-radius: 5px;
+            display: none;
+        }
+        .success {
+            background-color: #e8f5e9;
+            border: 1px solid #4caf50;
+            color: #2e7d32;
+        }
+        .error {
+            background-color: #ffebee;
+            border: 1px solid #ef5350;
+            color: #c62828;
+        }
+        button {
+            background-color: #0a66c2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px;
+        }
+        button:hover {
+            background-color: #084e96;
+        }
+        button:disabled {
+            background-color: #cccccc;
+            cursor: not-allowed;
+        }
+        #file-name {
+            margin-top: 10px;
+            font-style: italic;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <h1>LinkedIn CRM - Data Upload</h1>
+    
+    <div class="upload-container" id="drop-zone">
+        <p>Drag and drop your CSV file here or click to select</p>
+        <input type="file" id="file-input" accept=".csv" style="display: none">
+        <button onclick="document.getElementById('file-input').click()">Select File</button>
+        <div id="file-name"></div>
+        <div class="button-container">
+            <button id="process-file" style="display: none;">Process File</button>
+        </div>
+    </div>
+
+    <div id="result" class="result"></div>
+
+    <script>
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const fileName = document.getElementById('file-name');
+        const result = document.getElementById('result');
+        const processButton = document.getElementById('process-file');
+        let selectedFile = null;
+
+        // Prevent default drag behaviors
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, preventDefaults, false);
+            document.body.addEventListener(eventName, preventDefaults, false);
+        });
+
+        // Highlight drop zone when item is dragged over it
+        ['dragenter', 'dragover'].forEach(eventName => {
+            dropZone.addEventListener(eventName, highlight, false);
+        });
+
+        ['dragleave', 'drop'].forEach(eventName => {
+            dropZone.addEventListener(eventName, unhighlight, false);
+        });
+
+        function preventDefaults (e) {
+            e.preventDefault();
+            e.stopPropagation();
+        }
+
+        function highlight(e) {
+            dropZone.classList.add('dragover');
+        }
+
+        function unhighlight(e) {
+            dropZone.classList.remove('dragover');
+        }
+
+        dropZone.addEventListener('drop', handleDrop, false);
+        fileInput.addEventListener('change', handleFileSelect, false);
+
+        function handleDrop(e) {
+            const dt = e.dataTransfer;
+            const file = dt.files[0];
+            handleFile(file);
+        }
+
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            handleFile(file);
+        }
+
+        async function processFile(file) {
+            const formData = new FormData();
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('http://localhost:5000/upload', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const data = await response.json();
+                
+                if (response.ok) {
+                    result.className = 'result success';
+                    result.textContent = `Upload successful! Added ${data.new_records} new records, skipped ${data.skipped_records} existing records.`;
+                } else {
+                    throw new Error(data.error || 'Unknown error occurred');
+                }
+            } catch (error) {
+                console.error('Upload error:', error);
+                result.className = 'result error';
+                result.textContent = `Error: ${error.message}`;
+            } finally {
+                result.style.display = 'block';
+            }
+        }
+
+        function handleFile(file) {
+            if (file) {
+                selectedFile = file;
+                fileName.textContent = `Selected file: ${file.name}`;
+                processButton.style.display = 'inline-block';
+                result.style.display = 'none';
+            }
+        }
+
+        processButton.addEventListener('click', async () => {
+            if (!selectedFile) return;
+            
+            processButton.disabled = true;
+            processButton.textContent = 'Processing...';
+            result.style.display = 'none';
+            
+            await processFile(selectedFile);
+            
+            processButton.disabled = false;
+            processButton.textContent = 'Process File';
+        });
+    </script>
+</body>
+</html> 
