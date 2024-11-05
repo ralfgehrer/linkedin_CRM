@@ -1,3 +1,18 @@
+async function copyTemplateToClipboard(template, firstName) {
+  const filledTemplate = template.replace('{{Firstname}}', firstName);
+  try {
+    await navigator.clipboard.writeText(filledTemplate);
+    const statusMessage = document.getElementById('status-message');
+    statusMessage.textContent = 'Template copied to clipboard!';
+    statusMessage.className = 'status-success';
+    setTimeout(() => {
+      statusMessage.textContent = '';
+    }, 3000);
+  } catch (err) {
+    console.error('Failed to copy template:', err);
+  }
+}
+
 async function getProfileInfo() {
   const profileUrl = window.location.href;
   // Strip the linkedin.com part and clean the URL
@@ -86,6 +101,24 @@ async function createCRMOverlay() {
       <div class="crm-content">
         <textarea id="crm-notes" placeholder="Add notes for this profile..."></textarea>
         
+        <div class="templates-section">
+          <h4>Templates</h4>
+          <div class="template-card">
+            <pre class="template-preview">Freut mich mit dir connected zu sein ${profileInfo.firstName}
+
+Habt ihr schon irgendwelche AI Themen integriert. 
+Guten Start in den Tag
+Gruß
+Julien</pre>
+            <button class="copy-template-btn" title="Copy to clipboard">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
         <div class="category-buttons">
           <h4>Category:</h4>
           <button class="category-btn lead" data-category="lead">Lead</button>
@@ -399,6 +432,17 @@ async function createCRMOverlay() {
         });
       });
     }
+
+    // Add this in your event listeners section
+    document.querySelector('.copy-template-btn').addEventListener('click', () => {
+      const templateText = `Freut mich mit dir connected zu sein ${profileInfo.firstName}
+
+Habt ihr schon irgendwelche AI Themen integriert. 
+Guten Start in den Tag
+Gruß
+Julien`;
+      copyTemplateToClipboard(templateText, profileInfo.firstName);
+    });
 
   } catch (error) {
     console.error('Error setting up CRM overlay:', error);
