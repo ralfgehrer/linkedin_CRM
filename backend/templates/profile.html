@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>LinkedIn CRM - Profile View</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+        
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #eee;
+        }
+        
+        .profile-image {
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            margin-right: 20px;
+        }
+        
+        .profile-info {
+            flex: 1;
+        }
+        
+        .profile-name {
+            font-size: 24px;
+            margin: 0 0 5px 0;
+        }
+        
+        .profile-title {
+            color: #666;
+            margin: 0;
+        }
+        
+        .section {
+            margin: 20px 0;
+        }
+        
+        .section h3 {
+            color: #0a66c2;
+            margin: 0 0 10px 0;
+        }
+        
+        .field {
+            margin: 10px 0;
+        }
+        
+        .field-label {
+            font-weight: bold;
+            color: #666;
+        }
+        
+        .field-value {
+            margin-top: 5px;
+        }
+        
+        .category-badge {
+            display: inline-block;
+            padding: 5px 10px;
+            border-radius: 15px;
+            color: white;
+            font-size: 14px;
+            margin-right: 10px;
+        }
+        
+        .category-badge.lead { background: #ffd700; color: black; }
+        .category-badge.customer { background: #4CAF50; }
+        .category-badge.network { background: #2196F3; }
+        .category-badge.friend { background: #9C27B0; }
+        .category-badge.stale { background: #9E9E9E; }
+        
+        .notes {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            white-space: pre-wrap;
+        }
+        
+        .back-btn {
+            background: #0a66c2;
+            color: white;
+            padding: 8px 16px;
+            border-radius: 4px;
+            text-decoration: none;
+            font-weight: bold;
+        }
+        
+        .back-btn:hover {
+            background: #004182;
+        }
+        
+        .dates {
+            color: #666;
+            font-size: 14px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid #eee;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="profile-info">
+                <h1 class="profile-name">{{ profile.full_name }}</h1>
+                <p class="profile-title">{{ profile.title }}</p>
+            </div>
+            <a href="/" class="back-btn">Back to Dashboard</a>
+        </div>
+        
+        <div class="section">
+            <h3>Profile Information</h3>
+            <div class="field">
+                <div class="field-label">LinkedIn URL</div>
+                <div class="field-value">
+                    <a href="{{ profile.profile_url }}" target="_blank">{{ profile.profile_url }}</a>
+                </div>
+            </div>
+            <div class="field">
+                <div class="field-label">Category</div>
+                <div class="field-value">
+                    {% if profile.category %}
+                        <span class="category-badge {{ profile.category }}">{{ profile.category }}</span>
+                    {% else %}
+                        <span class="text-muted">Not categorized</span>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="field">
+                <div class="field-label">Connected Since</div>
+                <div class="field-value">
+                    {{ profile.connection_since.strftime('%Y-%m-%d') if profile.connection_since else 'Unknown' }}
+                </div>
+            </div>
+            {% if profile.recheck_date %}
+            <div class="field">
+                <div class="field-label">Recheck Date</div>
+                <div class="field-value">{{ profile.recheck_date.strftime('%Y-%m-%d') }}</div>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="section">
+            <h3>Notes</h3>
+            <div class="notes">{{ profile.notes or 'No notes added yet.' }}</div>
+        </div>
+        
+        <div class="dates">
+            <div>Created: {{ profile.created_at.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+            <div>Last Updated: {{ profile.updated_at.strftime('%Y-%m-%d %H:%M:%S') }}</div>
+        </div>
+    </div>
+</body>
+</html> 

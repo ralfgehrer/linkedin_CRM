@@ -357,3 +357,91 @@
   width: 16px;
   height: 16px;
 }
+
+.ai-suggestion-section {
+    margin: 15px 0;
+    border-top: 1px solid #eee;
+    padding-top: 15px;
+}
+
+.ai-suggestion-section h4 {
+    margin: 0 0 10px 0;
+    color: #666;
+    font-size: 14px;
+}
+
+.suggestion-card {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 4px;
+    padding: 12px;
+    margin-bottom: 10px;
+    position: relative;
+    display: flex;
+    align-items: flex-start;
+    gap: 10px;
+}
+
+.suggestion-preview {
+    flex: 1;
+    font-size: 12px;
+    color: #666;
+    white-space: pre-wrap;
+    line-height: 1.4;
+    margin: 0;
+    font-family: inherit;
+    background: none;
+    border: none;
+    overflow: visible;
+}
+
+.copy-suggestion-btn {
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    color: #666;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.copy-suggestion-btn:hover {
+    background: #e9ecef;
+    color: #0a66c2;
+}
+
+.copy-suggestion-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Update the AI suggestion section styles */
+.suggestion-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.suggestion-header h4 {
+    margin: 0;
+    color: #666;
+    font-size: 14px;
+}
+
+.get-suggestion-btn {
+    background: #9b59b6;
+    color: white;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    font-weight: bold;
+}
+
+.get-suggestion-btn:hover {
+    background: #8e44ad;
+}

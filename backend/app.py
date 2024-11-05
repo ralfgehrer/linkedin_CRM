@@ -14,6 +14,8 @@ from time import time
 import shutil
 from collections import deque
 from threading import Lock
+from openai import OpenAI
+import pytz
 
 load_dotenv()
 
@@ -588,6 +590,103 @@ def update_name():
         print(f"Error updating name: {str(e)}")
         return jsonify({'error': str(e)}), 500
         
+    finally:
+        cur.close()
+        conn.close()
+
+@app.route('/get-suggestion', methods=['POST'])
+def get_suggestion():
+    try:
+        # Initialize OpenAI client
+        client = OpenAI(api_key=os.getenv('OPEN_AI_KEY'))
+        
+        # Get data from request
+        data = request.json
+        profile_text = data['profile'].get('about', '')
+        message_history = data['messages']
+        
+        # Get current time in German timezone
+        german_tz = pytz.timezone('Europe/Berlin')
+        current_time = datetime.now(german_tz)
+        
+        # Format message history if it exists
+        message_text = "No previous messages"
+        if message_history:
+            message_text = "\n".join([
+                f"{msg['sender']}: {msg['content']}" 
+                for msg in message_history
+            ])
+
+        # Read prompt from file
+        prompt_path = os.path.join(os.path.dirname(__file__), 'prompts', 'message_suggestion.txt')
+        with open(prompt_path, 'r', encoding='utf-8') as f:
+            prompt_text = f.read()
+
+        # Create the prompt for GPT
+        prompt = {
+            "role": "system",
+            "content": prompt_text
+        }
+
+        user_message = {
+            "role": "user",
+            "content": f"""
+Current time in Germany: {current_time.strftime('%Y-%m-%d %H:%M:%S %Z')}
+
+Profile Information:
+{profile_text}
+
+Message History:
+{message_text}
+"""
+        }
+
+        # Call GPT API
+        response = client.chat.completions.create(
+            model="gpt-4o-mini",
+            messages=[prompt, user_message],
+            temperature=0.7,
+            max_tokens=200,
+            top_p=1,
+            frequency_penalty=0,
+            presence_penalty=0
+        )
+
+        suggestion = response.choices[0].message.content.strip()
+        
+        return jsonify({
+            'status': 'success',
+            'suggestion': suggestion
+        })
+        
+    except Exception as e:
+        print(f"Error getting suggestion: {str(e)}")
+        return jsonify({
+            'status': 'error',
+            'message': str(e)
+        }), 500
+
+@app.route('/profile/<path:profile_url>')
+def view_profile(profile_url):
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=DictCursor)
+    
+    try:
+        # Get profile data
+        cur.execute('''
+            SELECT * FROM profiles 
+            WHERE profile_url = %s
+        ''', (profile_url,))
+        profile = cur.fetchone()
+        
+        if not profile:
+            flash('Profile not found', 'error')
+            return redirect('/')
+            
+        return render_template('profile.html', 
+                             profile=dict(profile),
+                             categories=['lead', 'customer', 'network', 'friend', 'stale'])
+                             
     finally:
         cur.close()
         conn.close()

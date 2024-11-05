@@ -292,12 +292,11 @@
             <h3>Recent Updates</h3>
             {% for update in recent_updates %}
             <div class="update-item">
-                <strong>{{ update.full_name }}</strong>
+                <a href="/profile/{{ update.profile_url|urlencode }}" class="profile-link">{{ update.full_name }}</a>
                 {% if update.category %}
                 <span class="category-badge {{ update.category }}">{{ update.category }}</span>
                 {% endif %}
-                <br>
-                <small>Updated: {{ update.updated_at.strftime('%Y-%m-%d %H:%M') }}</small>
+                <span class="update-time">{{ update.updated_at.strftime('%Y-%m-%d %H:%M:%S') }}</span>
             </div>
             {% endfor %}
         </div>

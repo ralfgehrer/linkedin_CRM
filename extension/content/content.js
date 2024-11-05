@@ -117,6 +117,22 @@ async function createCRMOverlay() {
       <div class="crm-content">
         <textarea id="crm-notes" placeholder="Add notes for this profile..."></textarea>
         
+        <div class="ai-suggestion-section">
+          <div class="suggestion-header">
+            <h4>AI Suggestion</h4>
+            <button id="get-ai-suggestion" class="get-suggestion-btn">Get Suggestion</button>
+          </div>
+          <div class="suggestion-card">
+            <pre id="ai-suggestion-text" class="suggestion-preview"></pre>
+            <button class="copy-suggestion-btn" title="Copy to clipboard">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+              </svg>
+            </button>
+          </div>
+        </div>
+
         <div class="templates-section">
           <h4>Templates</h4>
           <div class="template-card">
@@ -456,6 +472,9 @@ Julien`;
       copyTemplateToClipboard(templateText, profileInfo.firstName);
     });
 
+    // Add a button to the CRM panel to get AI suggestions
+    addAISuggestionButton(overlay);
+
   } catch (error) {
     console.error('Error setting up CRM overlay:', error);
     overlay.innerHTML = `
@@ -485,4 +504,120 @@ new MutationObserver(() => {
 // Initial creation
 if (window.location.href.includes('linkedin.com/in/')) {
   createCRMOverlay();
+} 
+
+function extractProfileContent() {
+    const profileData = {
+        headline: '',
+        about: '',
+        experience: '',
+        skills: ''
+    };
+
+    try {
+        // Get the main content section
+        const mainContent = document.querySelector('main.scaffold-layout__main');
+        if (mainContent) {
+            // Get all text content from the main section
+            const fullText = mainContent.textContent.trim()
+                .replace(/\s+/g, ' ')  // Replace multiple spaces with single space
+                .replace(/\n+/g, '\n'); // Replace multiple newlines with single newline
+
+            profileData.about = fullText;
+            console.log('Extracted profile content:', fullText);
+        }
+
+        return profileData;
+    } catch (error) {
+        console.error('Error extracting profile content:', error);
+        return profileData;
+    }
+}
+
+function extractMessageHistory() {
+    try {
+        // Get all message groups
+        const messageGroups = document.querySelectorAll('.msg-s-message-list__event');
+        if (!messageGroups.length) {
+            console.log('No message thread found');
+            return null;
+        }
+
+        // Extract messages with sender info
+        const messages = Array.from(messageGroups).map(group => {
+            const sender = group.querySelector('.msg-s-message-group__name')?.textContent?.trim();
+            const messageContent = group.querySelector('.msg-s-event-listitem__body')?.textContent?.trim();
+            const timestamp = group.querySelector('.msg-s-message-group__timestamp')?.textContent?.trim();
+            
+            return {
+                sender,
+                content: messageContent,
+                timestamp
+            };
+        }).filter(msg => msg.sender && msg.content);
+
+        console.log('Extracted messages:', messages);
+        return messages;
+    } catch (error) {
+        console.error('Error extracting message history:', error);
+        return null;
+    }
+}
+
+// Add a button to the CRM panel to get AI suggestions
+function addAISuggestionButton(overlay) {
+    const suggestButton = overlay.querySelector('#get-ai-suggestion');
+    const copySuggestionBtn = overlay.querySelector('.copy-suggestion-btn');
+    
+    copySuggestionBtn.addEventListener('click', async () => {
+        const suggestionText = document.getElementById('ai-suggestion-text').textContent;
+        try {
+            await navigator.clipboard.writeText(suggestionText);
+            const statusMessage = document.getElementById('status-message');
+            statusMessage.textContent = 'Suggestion copied to clipboard!';
+            statusMessage.className = 'status-success';
+            setTimeout(() => {
+                statusMessage.textContent = '';
+            }, 3000);
+        } catch (err) {
+            console.error('Failed to copy suggestion:', err);
+        }
+    });
+
+    suggestButton.addEventListener('click', async () => {
+        const statusMessage = document.getElementById('status-message');
+        statusMessage.textContent = 'Getting AI suggestion...';
+        statusMessage.className = 'status-saving';
+
+        try {
+            const profileContent = extractProfileContent();
+            const messageHistory = extractMessageHistory();
+            
+            const response = await fetch('http://localhost:5000/get-suggestion', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    profile: profileContent,
+                    messages: messageHistory
+                })
+            });
+
+            if (!response.ok) throw new Error('Failed to get suggestion');
+            
+            const data = await response.json();
+            
+            // Update the suggestion text area
+            const suggestionArea = document.getElementById('ai-suggestion-text');
+            suggestionArea.textContent = data.suggestion;
+            
+            statusMessage.textContent = 'AI suggestion ready!';
+            statusMessage.className = 'status-success';
+        } catch (error) {
+            console.error('Error getting AI suggestion:', error);
+            statusMessage.textContent = 'Failed to get AI suggestion';
+            statusMessage.className = 'status-error';
+        }
+    });
 } 
