@@ -369,27 +369,63 @@ def handle_notes():
 
 @app.route('/next-profile', methods=['GET'])
 def get_next_profile():
-    # If cache is getting low (less than 7 profiles), refresh it
-    if len(next_profiles_cache) < 7:
-        refresh_profile_cache()
+    conn = get_db_connection()
+    cur = conn.cursor(cursor_factory=DictCursor)
     
-    # Get next profile from cache
-    with cache_lock:
-        if next_profiles_cache:
-            next_profile = next_profiles_cache.popleft()
-            # Trigger async refresh if cache is getting low
-            if len(next_profiles_cache) < 7:
-                from threading import Thread
-                Thread(target=refresh_profile_cache).start()
+    try:
+        # 1. First priority: Profiles that need recheck today
+        cur.execute('''
+            SELECT profile_url 
+            FROM profiles 
+            WHERE recheck_date <= CURRENT_DATE
+            ORDER BY recheck_date ASC
+            LIMIT 1
+        ''')
+        result = cur.fetchone()
+        if result:
             return jsonify({
-                'next_profile_url': next_profile['profile_url']
+                'next_profile_url': result['profile_url']
             })
-    
-    # If cache is empty after refresh, return error
-    return jsonify({
-        'error': 'No profiles found matching the prioritization criteria',
-        'message': 'All profiles have been categorized and scheduled for recheck'
-    }), 404
+
+        # 2. Second priority: Uncategorized profiles, newest connections first
+        cur.execute('''
+            SELECT profile_url 
+            FROM profiles 
+            WHERE category IS NULL
+            AND connection_since IS NOT NULL
+            ORDER BY connection_since DESC
+            LIMIT 1
+        ''')
+        result = cur.fetchone()
+        if result:
+            return jsonify({
+                'next_profile_url': result['profile_url']
+            })
+
+        # 3. Third priority: Random network or lead without recheck date
+        cur.execute('''
+            SELECT profile_url 
+            FROM profiles 
+            WHERE category IN ('network', 'lead')
+            AND recheck_date IS NULL
+            ORDER BY RANDOM()
+            LIMIT 1
+        ''')
+        result = cur.fetchone()
+        if result:
+            return jsonify({
+                'next_profile_url': result['profile_url']
+            })
+
+        # If no profiles match any criteria, return error
+        return jsonify({
+            'error': 'No profiles found matching the prioritization criteria',
+            'message': 'All profiles have been categorized and scheduled for recheck'
+        }), 404
+        
+    finally:
+        cur.close()
+        conn.close()
 
 @app.route('/search', methods=['GET'])
 def search_profiles():
