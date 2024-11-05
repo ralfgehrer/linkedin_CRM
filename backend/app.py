@@ -125,6 +125,14 @@ def dashboard():
         cur.execute('SELECT COUNT(*) FROM profiles')
         total_profiles = cur.fetchone()[0]
         
+        # Profiles updated today
+        cur.execute('''
+            SELECT COUNT(*) 
+            FROM profiles 
+            WHERE DATE(updated_at) = CURRENT_DATE
+        ''')
+        worked_today = cur.fetchone()[0]
+        
         # Profiles by category
         cur.execute('''
             SELECT category, COUNT(*) as count 
@@ -199,6 +207,7 @@ def dashboard():
         
         return render_template('dashboard.html',
                              total_profiles=total_profiles,
+                             worked_today=worked_today,
                              categories=categories,
                              needs_recheck=needs_recheck,
                              recent_additions=recent_additions,
@@ -319,6 +328,17 @@ def handle_notes():
     try:
         if request.method == 'POST':
             data = request.json
+            
+            # First check if profile exists
+            cur.execute('SELECT profile_url FROM profiles WHERE profile_url = %s', (data['profile_url'],))
+            profile_exists = cur.fetchone()
+            
+            if not profile_exists:
+                return jsonify({
+                    'status': 'error',
+                    'message': 'Profile not found in database. Please import profile data first.'
+                }), 404
+            
             recheck_date = data.get('recheck_date')
             if recheck_date in ['null', '', None]:
                 recheck_date = None
@@ -337,11 +357,6 @@ def handle_notes():
                 data['profile_url']
             ))
             conn.commit()
-            
-            # Refresh cache after update as priorities might have changed
-            from threading import Thread
-            Thread(target=refresh_profile_cache).start()
-            
             return jsonify({'status': 'success'})
         
         elif request.method == 'GET':

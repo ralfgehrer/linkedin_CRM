@@ -14,28 +14,44 @@ async function copyTemplateToClipboard(template, firstName) {
 }
 
 async function getProfileInfo() {
-  const profileUrl = window.location.href;
-  // Strip the linkedin.com part and clean the URL
-  const cleanUrl = profileUrl
-    .replace('https://www.linkedin.com/in/', '')
-    .replace('https://linkedin.com/in/', '')
-    .split('?')[0] // Remove query parameters
-    .split('/')[0]; // Remove any trailing paths
-  
-  // Check if profile exists in CRM
   try {
-    const response = await fetch(`http://localhost:5000/notes?profile_url=${encodeURIComponent(profileUrl)}`);
+    // Get and decode the URL properly
+    const rawUrl = window.location.href;
+    const decodedUrl = decodeURIComponent(rawUrl);
+    
+    // Clean both versions of the URL
+    const cleanUrl = decodedUrl
+      .replace('https://www.linkedin.com/in/', '')
+      .replace('https://linkedin.com/in/', '')
+      .split('?')[0]
+      .split('/')[0];
+    
+    // Try both encoded and decoded versions for the API call
+    const response = await fetch(`http://localhost:5000/notes?profile_url=${encodeURIComponent(decodedUrl)}`);
+    
     if (!response.ok) {
-      throw new Error('Failed to fetch profile info');
+      // Try fallback with raw URL if decoded version fails
+      const fallbackResponse = await fetch(`http://localhost:5000/notes?profile_url=${encodeURIComponent(rawUrl)}`);
+      if (!fallbackResponse.ok) {
+        throw new Error('Failed to fetch profile info');
+      }
+      const data = await fallbackResponse.json();
+      const profileExists = Object.keys(data).length > 0;
+      
+      return {
+        profileUrl: rawUrl,
+        cleanUrl,
+        inCRM: profileExists,
+        firstName: data.first_name || '',
+        lastName: data.last_name || ''
+      };
     }
     
     const data = await response.json();
-    
-    // Check if profile exists in database by checking if we got any data back
     const profileExists = Object.keys(data).length > 0;
     
     return {
-      profileUrl,
+      profileUrl: decodedUrl,
       cleanUrl,
       inCRM: profileExists,
       firstName: data.first_name || '',
@@ -44,8 +60,8 @@ async function getProfileInfo() {
   } catch (error) {
     console.error('Error checking profile:', error);
     return {
-      profileUrl,
-      cleanUrl,
+      profileUrl: window.location.href,
+      cleanUrl: window.location.href.split('/').pop().split('?')[0],
       inCRM: false,
       firstName: '',
       lastName: ''
@@ -298,69 +314,65 @@ Julien</pre>
     // Save and navigate to next
     async function saveAndNavigateToNext() {
       const statusMessage = document.getElementById('status-message');
-      statusMessage.textContent = 'Saving and loading next profile...';
+      statusMessage.textContent = 'Loading next profile...';
       statusMessage.className = 'status-saving';
 
       try {
-        // First save the current notes
-        const notes = document.getElementById('crm-notes').value;
-        const activeCategory = document.querySelector('.category-btn.active');
-        const recheckInfo = document.getElementById('recheck-info');
+        // Try to save first, but continue even if it fails
+        try {
+          const notes = document.getElementById('crm-notes').value;
+          const activeCategory = document.querySelector('.category-btn.active');
+          const recheckInfo = document.getElementById('recheck-info');
 
-        const saveData = {
-          profile_url: profileInfo.profileUrl,
-          notes: notes,
-          category: activeCategory ? activeCategory.dataset.category : null,
-          recheck_date: recheckInfo ? recheckInfo.dataset.date : null
-        };
+          const saveData = {
+            profile_url: profileInfo.profileUrl,
+            notes: notes,
+            category: activeCategory ? activeCategory.dataset.category : null,
+            recheck_date: recheckInfo ? recheckInfo.dataset.date : null
+          };
 
-        const saveResponse = await chrome.runtime.sendMessage({
-          type: 'saveNotes',
-          data: saveData
-        });
-
-        if (saveResponse.status !== 'success') {
-          throw new Error('Failed to save notes');
+          const saveResponse = await chrome.runtime.sendMessage({
+            type: 'saveNotes',
+            data: saveData
+          });
+          
+          if (saveResponse.status === 'success') {
+            console.log('Notes saved successfully');
+          }
+        } catch (saveError) {
+          console.log('Could not save notes:', saveError.message);
+          // Just log the error and continue with navigation
         }
 
-        // Then get the next profile
+        // Always proceed with getting next profile
         const nextProfileResponse = await fetch('http://localhost:5000/next-profile');
         const nextProfileData = await nextProfileResponse.json();
 
         if (nextProfileData.next_profile_url) {
-          // Instead of using window.location.href, find and click the next profile link
           const profilePath = nextProfileData.next_profile_url
             .replace('https://www.linkedin.com', '')
             .replace('https://linkedin.com', '');
           
-          // Create a navigation event that LinkedIn's router will handle
-          const navEvent = new PopStateEvent('popstate');
-          const oldURL = window.location.href;
-          
-          // Update the URL without reload
           window.history.pushState({}, '', profilePath);
-          window.dispatchEvent(navEvent);
+          window.dispatchEvent(new PopStateEvent('popstate'));
 
-          // Wait for the profile to load and recreate the overlay
           setTimeout(() => {
-            if (oldURL !== window.location.href) {
-              const existingOverlay = document.getElementById('linkedin-crm-overlay');
-              if (existingOverlay) {
-                existingOverlay.remove();
-              }
-              createCRMOverlay();
+            const existingOverlay = document.getElementById('linkedin-crm-overlay');
+            if (existingOverlay) {
+              existingOverlay.remove();
             }
+            createCRMOverlay();
           }, 1000);
 
-          statusMessage.textContent = 'Saved and navigated!';
+          statusMessage.textContent = 'Navigated to next profile!';
           statusMessage.className = 'status-success';
         } else {
           throw new Error('No next profile available');
         }
 
       } catch (error) {
-        console.error('Error in save and next:', error);
-        statusMessage.textContent = 'Failed to save and navigate. Check console for details.';
+        console.error('Error navigating to next profile:', error);
+        statusMessage.textContent = 'Failed to find next profile. Check console for details.';
         statusMessage.className = 'status-error';
       }
     }
