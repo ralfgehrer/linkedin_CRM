@@ -186,22 +186,23 @@ def dashboard():
         ''')
         recent_updates = cur.fetchall()
         
-        # Connection timeline
+        # Connection timeline - Changed to weekly
         cur.execute('''
-            SELECT DATE_TRUNC('month', connection_since) as month,
-                   COUNT(*) as count
+            SELECT 
+                DATE_TRUNC('week', connection_since) as week,
+                COUNT(*) as count
             FROM profiles
             WHERE connection_since IS NOT NULL
-            GROUP BY month
-            ORDER BY month DESC
-            LIMIT 12
+            GROUP BY week
+            ORDER BY week DESC
+            LIMIT 12  -- Last 12 weeks
         ''')
         timeline_data = cur.fetchall()
         
         # Format the timeline data
         connection_timeline = [
             {
-                'month': row['month'].strftime('%Y-%m'),
+                'week': row['week'].strftime('%Y-%m-%d'),  # Start of week
                 'count': row['count']
             }
             for row in timeline_data

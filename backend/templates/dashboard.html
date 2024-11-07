@@ -370,9 +370,16 @@
         new Chart(timelineCtx, {
             type: 'line',
             data: {
-                labels: timelineData.map(item => item.month),
+                labels: timelineData.map(item => {
+                    const date = new Date(item.week);
+                    return date.toLocaleDateString('de-DE', { 
+                        year: 'numeric', 
+                        month: 'short', 
+                        day: 'numeric'
+                    });
+                }),
                 datasets: [{
-                    label: 'New Connections',
+                    label: 'New Connections per Week',
                     data: timelineData.map(item => item.count),
                     borderColor: '#0a66c2',
                     tension: 0.1
@@ -382,7 +389,10 @@
                 responsive: true,
                 scales: {
                     y: {
-                        beginAtZero: true
+                        beginAtZero: true,
+                        ticks: {
+                            stepSize: 1
+                        }
                     }
                 }
             }
