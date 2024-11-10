@@ -85,6 +85,12 @@ linkedin_crm/
 
 3. Click "Load unpacked" and select the `extension` folder
 
+## Fill the database
+Go to https://www.linkedin.com/mypreferences/d/download-my-data and download the connection data. 
+You will get a csv file within 10 min. 
+
+You can then upload the file on localhost:5000
+
 ## Development
 
 ### Database Migrations

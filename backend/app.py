@@ -183,13 +183,13 @@ def dashboard():
         ''')
         avg_note_length = cur.fetchone()[0]
         
-        # Most recent updates
+        # Most recent updates - Changed from 5 to 50
         cur.execute('''
             SELECT profile_url, full_name, updated_at, category
             FROM profiles
             WHERE updated_at IS NOT NULL
             ORDER BY updated_at DESC
-            LIMIT 5
+            LIMIT 50
         ''')
         recent_updates = cur.fetchall()
         
@@ -234,20 +234,6 @@ def dashboard():
 def upload_page():
     return render_template('upload.html')
 
-@app.route('/upload-progress')
-def progress():
-    def generate():
-        global upload_progress
-        while True:
-            # Send current progress
-            data = json.dumps(upload_progress)
-            yield f"data: {data}\n\n"
-            time.sleep(0.5)  # Update every 500ms
-    
-    response = Response(stream_with_context(generate()), mimetype='text/event-stream')
-    response.headers['Cache-Control'] = 'no-cache'
-    response.headers['X-Accel-Buffering'] = 'no'
-    return response
 
 @app.route('/upload', methods=['POST', 'OPTIONS'])
 def upload_csv():
@@ -266,18 +252,26 @@ def upload_csv():
     file = request.files['file']
     print(f"Received file: {file.filename}")
     
-    if file.filename == '':
-        print("Empty filename")
-        return jsonify({'error': 'No file selected'}), 400
-    
-    if not file.filename.endswith('.csv'):
-        print("Not a CSV file")
-        return jsonify({'error': 'File must be a CSV'}), 400
+    if file.filename == '' or not file.filename.endswith('.csv'):
+        print("Invalid file format")
+        return jsonify({'error': 'Invalid file. Must be a CSV'}), 400
 
     try:
         print("Reading file contents")
-        stream = io.StringIO(file.stream.read().decode("UTF8"), newline=None)
+        content = file.stream.read().decode("UTF8")
+        
+        # Skip notes section if present
+        if content.startswith('Notes:'):
+            print("Skipping notes section")
+            content = content[content.find('\n\n') + 2:]
+        
+        stream = io.StringIO(content, newline=None)
         csv_reader = csv.DictReader(stream)
+        
+        # Determine CSV format based on headers
+        headers = csv_reader.fieldnames
+        is_old_format = 'profileUrl' in headers
+        print(f"CSV Format: {'old' if is_old_format else 'new'}")
         
         print("Connecting to database")
         conn = get_db_connection()
@@ -288,26 +282,48 @@ def upload_csv():
             print(f"Processing row: {upload_progress['processed'] + 1}")
             upload_progress['processed'] += 1
             
-            cur.execute('SELECT profile_url FROM profiles WHERE profile_url = %s', (row['profileUrl'],))
-            exists = cur.fetchone()
+            # Map fields based on format
+            if is_old_format:
+                profile_url = row['profileUrl']
+                first_name = row['firstName']
+                last_name = row['lastName']
+                full_name = row['fullName']
+                title = row['title']
+                connection_since = row['connectionSince']
+                profile_image_url = row['profileImageUrl']
+            else:
+                profile_url = row['URL']
+                first_name = row['First Name']
+                last_name = row['Last Name']
+                full_name = f"{first_name} {last_name}".strip()
+                title = row['Position']
+                # Convert date format from "DD MMM YYYY" to ISO format
+                try:
+                    date_obj = datetime.strptime(row['Connected On'], '%d %b %Y')
+                    connection_since = date_obj.strftime('%Y-%m-%d')
+                except:
+                    connection_since = None
+                profile_image_url = None
+
+            # Add "/" to profile_url end if missing
+            if not profile_url.endswith('/'):
+                profile_url += '/'
             
-            if exists:
+            # Check if profile exists
+            cur.execute('SELECT profile_url FROM profiles WHERE profile_url = %s', (profile_url,))
+            if cur.fetchone():
                 upload_progress['skipped_records'] += 1
                 continue
             
+            # Insert new profile
             cur.execute('''
                 INSERT INTO profiles 
                 (profile_url, first_name, last_name, full_name, title, 
                  connection_since, profile_image_url)
                 VALUES (%s, %s, %s, %s, %s, %s, %s)
             ''', (
-                row['profileUrl'],
-                row['firstName'],
-                row['lastName'],
-                row['fullName'],
-                row['title'],
-                row['connectionSince'],
-                row['profileImageUrl']
+                profile_url, first_name, last_name, full_name,
+                title, connection_since, profile_image_url
             ))
             upload_progress['new_records'] += 1
         
