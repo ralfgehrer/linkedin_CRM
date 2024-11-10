@@ -20,6 +20,13 @@ import pytz
 load_dotenv()
 
 app = Flask(__name__)
+
+# Initialize OpenAI client
+client = OpenAI(api_key=os.getenv('OPEN_AI_KEY'))
+
+# Global variable for my name
+MY_NAME = os.getenv('MY_NAME')
+
 # Update CORS settings
 CORS(app, resources={
     r"/*": {
@@ -595,73 +602,60 @@ def update_name():
         cur.close()
         conn.close()
 
-@app.route('/get-suggestion', methods=['POST'])
-def get_suggestion():
+@app.route('/process-voice-message', methods=['POST'])
+def process_voice_message():
     try:
-        # Initialize OpenAI client
-        client = OpenAI(api_key=os.getenv('OPEN_AI_KEY'))
+        if 'audio' not in request.files:
+            return jsonify({'error': 'No audio file provided'}), 400
+
+        audio_file = request.files['audio']
+        profile_content = request.form.get('profile_content', '')
         
-        # Get data from request
-        data = request.json
-        profile_text = data['profile'].get('about', '')
-        message_history = data['messages']
-        
-        # Get current time in German timezone
-        german_tz = pytz.timezone('Europe/Berlin')
-        current_time = datetime.now(german_tz)
-        
-        # Format message history if it exists
-        message_text = "No previous messages"
-        if message_history:
-            message_text = "\n".join([
-                f"{msg['sender']}: {msg['content']}" 
-                for msg in message_history
-            ])
+        # Save the audio file temporarily
+        temp_filename = 'temp_audio.mp3'
+        audio_file.save(temp_filename)
 
-        # Read prompt from file
-        prompt_path = os.path.join(os.path.dirname(__file__), 'prompts', 'message_suggestion.txt')
-        with open(prompt_path, 'r', encoding='utf-8') as f:
-            prompt_text = f.read()
+        # Transcribe using Whisper API
+        with open(temp_filename, 'rb') as audio_file:
+            transcript = client.audio.transcriptions.create(
+                model="whisper-1", 
+                file=audio_file
+            )
 
-        # Create the prompt for GPT
-        prompt = {
-            "role": "system",
-            "content": prompt_text
-        }
+        # Clean up temporary file
+        os.remove(temp_filename)
 
-        user_message = {
-            "role": "user",
-            "content": f"""
-Current time in Germany: {current_time.strftime('%Y-%m-%d %H:%M:%S %Z')}
+        # Refine the transcription with GPT
+        prompt = f"""
+        Please refine this transcribed message. Format it with appropriate line breaks 
+        but no other formatting. Make sure company names and person names match the profile content.
+        My name is {MY_NAME}.
+        Use this profile content as reference for names and companies: 
+        {profile_content}
 
-Profile Information:
-{profile_text}
+        Here is the transcribed message:
+        {transcript.text}
+        """
 
-Message History:
-{message_text}
-"""
-        }
-
-        # Call GPT API
         response = client.chat.completions.create(
             model="gpt-4o-mini",
-            messages=[prompt, user_message],
+            messages=[
+                {"role": "system", "content": prompt},
+                {"role": "user", "content": transcript.text}
+            ],
             temperature=0.7,
-            max_tokens=200,
-            top_p=1,
-            frequency_penalty=0,
-            presence_penalty=0
+            max_tokens=500
         )
 
-        suggestion = response.choices[0].message.content.strip()
+        refined_message = response.choices[0].message.content.strip()
         
         return jsonify({
             'status': 'success',
-            'suggestion': suggestion
+            'message': refined_message
         })
         
     except Exception as e:
-        print(f"Error getting suggestion: {str(e)}")
+        print(f"Error processing voice message: {str(e)}")
         return jsonify({
             'status': 'error',
             'message': str(e)

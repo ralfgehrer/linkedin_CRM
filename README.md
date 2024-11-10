@@ -52,9 +52,11 @@ linkedin_crm/
    Create a `.env` file in the backend directory with:
    ```
    DATABASE_URL=postgresql://username:password@localhost:5432/linkedin_crm
+   OPENAI_API_KEY=your_openai_api_key
+   MY_NAME="Your Name"
    ```
 
-4. Initialize the database:
+4. Initialize the database: (Should be only needed if you plan on making changes to the database schema)
    ```bash
    # Initialize migrations
    alembic init migrations
@@ -62,7 +64,7 @@ linkedin_crm/
    # Create initial migration
    alembic revision --autogenerate -m "Initial migration"
 
-   # Apply migrations and load initial data
+   # Apply migrations
    python db_init.py
    ```
 
@@ -70,6 +72,10 @@ linkedin_crm/
    ```bash
    python app.py
    ```
+
+6. Load the initial data:
+
+   Go to Localhost:5000 and load the initial data. Check the console for progress and errors.
 
 ## Extension Setup
 
