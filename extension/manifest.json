@@ -6,7 +6,8 @@
   "permissions": [
     "activeTab",
     "storage",
-    "scripting"
+    "scripting",
+    "microphone"
   ],
   "host_permissions": [
     "https://*.linkedin.com/*",

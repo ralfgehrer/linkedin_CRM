@@ -358,13 +358,13 @@
   height: 16px;
 }
 
-.ai-suggestion-section {
+.smart-dictate-section {
     margin: 15px 0;
     border-top: 1px solid #eee;
     padding-top: 15px;
 }
 
-.ai-suggestion-section h4 {
+.smart-dictate-section h4 {
     margin: 0 0 10px 0;
     color: #666;
     font-size: 14px;
@@ -405,6 +405,7 @@
     display: flex;
     align-items: center;
     justify-content: center;
+    transition: all 0.3s ease;
 }
 
 .copy-suggestion-btn:hover {
@@ -432,16 +433,74 @@
 }
 
 .get-suggestion-btn {
-    background: #9b59b6;
-    color: white;
-    border: none;
-    padding: 6px 12px;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 12px;
-    font-weight: bold;
+    display: none;
 }
 
-.get-suggestion-btn:hover {
-    background: #8e44ad;
+/* Add to your existing CSS */
+.record-button {
+    background: none;
+    border: none;
+    padding: 8px;
+    cursor: pointer;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s ease;
+}
+
+.record-button:hover {
+    background-color: #f8f9fa;
+}
+
+.record-button svg {
+    width: 24px;
+    height: 24px;
+    stroke: #666;
+    stroke-width: 2;
+}
+
+.record-button.recording {
+    background-color: #dc3545;
+}
+
+.record-button.recording svg {
+    stroke: white;
+}
+
+#dictation-text {
+    flex: 1;
+    font-size: 12px;
+    color: #666;
+    white-space: pre-wrap;
+    line-height: 1.4;
+    margin: 0;
+    font-family: inherit;
+    background: none;
+    border: none;
+    overflow: visible;
+}
+
+/* Add these styles for copy button feedback */
+.copy-suggestion-btn.copied {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.copy-suggestion-btn.copied svg {
+    stroke: white;
+}
+
+/* Update the transition for smoother feedback */
+.copy-suggestion-btn {
+    background: none;
+    border: none;
+    padding: 4px;
+    cursor: pointer;
+    color: #666;
+    border-radius: 4px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
 }

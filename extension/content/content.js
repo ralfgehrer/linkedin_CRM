@@ -117,13 +117,17 @@ async function createCRMOverlay() {
       <div class="crm-content">
         <textarea id="crm-notes" placeholder="Add notes for this profile..."></textarea>
         
-        <div class="ai-suggestion-section">
+        <div class="smart-dictate-section">
           <div class="suggestion-header">
-            <h4>AI Suggestion</h4>
-            <button id="get-ai-suggestion" class="get-suggestion-btn">Get Suggestion</button>
+            <h4>Smart Dictate</h4>
+            <button class="record-button" title="Record voice message">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                <circle cx="12" cy="12" r="6"/>
+              </svg>
+            </button>
           </div>
           <div class="suggestion-card">
-            <pre id="ai-suggestion-text" class="suggestion-preview"></pre>
+            <pre id="dictation-text" class="suggestion-preview"></pre>
             <button class="copy-suggestion-btn" title="Copy to clipboard">
               <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                 <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
@@ -472,8 +476,8 @@ Julien`;
       copyTemplateToClipboard(templateText, profileInfo.firstName);
     });
 
-    // Add a button to the CRM panel to get AI suggestions
-    addAISuggestionButton(overlay);
+    // Add new voice recording functionality
+    addVoiceMessageButton(overlay);
 
   } catch (error) {
     console.error('Error setting up CRM overlay:', error);
@@ -564,60 +568,100 @@ function extractMessageHistory() {
     }
 }
 
-// Add a button to the CRM panel to get AI suggestions
-function addAISuggestionButton(overlay) {
-    const suggestButton = overlay.querySelector('#get-ai-suggestion');
-    const copySuggestionBtn = overlay.querySelector('.copy-suggestion-btn');
-    
-    copySuggestionBtn.addEventListener('click', async () => {
-        const suggestionText = document.getElementById('ai-suggestion-text').textContent;
+// Add new voice recording functionality
+function addVoiceMessageButton(overlay) {
+    const recordButton = overlay.querySelector('.record-button');
+    const copyButton = overlay.querySelector('.copy-suggestion-btn');
+    let mediaRecorder;
+    let audioChunks = [];
+    let isRecording = false;
+
+    // Add copy button functionality
+    copyButton.addEventListener('click', async () => {
+        const dictationText = document.getElementById('dictation-text').textContent;
         try {
-            await navigator.clipboard.writeText(suggestionText);
+            await navigator.clipboard.writeText(dictationText);
+            
+            // Visual feedback
+            copyButton.classList.add('copied');
+            const originalTitle = copyButton.title;
+            copyButton.title = 'Copied!';
+            
+            // Show status message
             const statusMessage = document.getElementById('status-message');
-            statusMessage.textContent = 'Suggestion copied to clipboard!';
+            statusMessage.textContent = 'Text copied to clipboard!';
             statusMessage.className = 'status-success';
+            
+            // Reset after 2 seconds
             setTimeout(() => {
+                copyButton.classList.remove('copied');
+                copyButton.title = originalTitle;
                 statusMessage.textContent = '';
-            }, 3000);
+            }, 2000);
         } catch (err) {
-            console.error('Failed to copy suggestion:', err);
+            console.error('Failed to copy text:', err);
+            const statusMessage = document.getElementById('status-message');
+            statusMessage.textContent = 'Failed to copy text';
+            statusMessage.className = 'status-error';
         }
     });
 
-    suggestButton.addEventListener('click', async () => {
-        const statusMessage = document.getElementById('status-message');
-        statusMessage.textContent = 'Getting AI suggestion...';
-        statusMessage.className = 'status-saving';
+    recordButton.addEventListener('click', async () => {
+        if (!isRecording) {
+            try {
+                const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                mediaRecorder = new MediaRecorder(stream);
+                audioChunks = [];
 
-        try {
-            const profileContent = extractProfileContent();
-            const messageHistory = extractMessageHistory();
-            
-            const response = await fetch('http://localhost:5000/get-suggestion', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    profile: profileContent,
-                    messages: messageHistory
-                })
-            });
+                mediaRecorder.ondataavailable = (event) => {
+                    audioChunks.push(event.data);
+                };
 
-            if (!response.ok) throw new Error('Failed to get suggestion');
-            
-            const data = await response.json();
-            
-            // Update the suggestion text area
-            const suggestionArea = document.getElementById('ai-suggestion-text');
-            suggestionArea.textContent = data.suggestion;
-            
-            statusMessage.textContent = 'AI suggestion ready!';
-            statusMessage.className = 'status-success';
-        } catch (error) {
-            console.error('Error getting AI suggestion:', error);
-            statusMessage.textContent = 'Failed to get AI suggestion';
-            statusMessage.className = 'status-error';
+                mediaRecorder.onstop = async () => {
+                    const audioBlob = new Blob(audioChunks, { type: 'audio/mpeg-3' });
+                    
+                    // Get profile content for reference
+                    const profileContent = extractProfileContent();
+                    
+                    // Create form data
+                    const formData = new FormData();
+                    formData.append('audio', audioBlob, 'recording.mp3');
+                    formData.append('profile_content', JSON.stringify(profileContent));
+
+                    // Show processing status
+                    const dictationArea = document.getElementById('dictation-text');
+                    dictationArea.textContent = 'Processing voice message...';
+
+                    try {
+                        const response = await fetch('http://localhost:5000/process-voice-message', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        const data = await response.json();
+                        if (data.status === 'success') {
+                            dictationArea.textContent = data.message;
+                        } else {
+                            throw new Error(data.message);
+                        }
+                    } catch (error) {
+                        console.error('Error processing voice message:', error);
+                        dictationArea.textContent = 'Error processing voice message. Please try again.';
+                    }
+                };
+
+                mediaRecorder.start();
+                isRecording = true;
+                recordButton.style.backgroundColor = '#dc3545';
+                recordButton.querySelector('svg circle').style.fill = '#dc3545';
+            } catch (error) {
+                console.error('Error starting recording:', error);
+            }
+        } else {
+            mediaRecorder.stop();
+            isRecording = false;
+            recordButton.style.backgroundColor = '';
+            recordButton.querySelector('svg circle').style.fill = 'none';
         }
     });
 } 
