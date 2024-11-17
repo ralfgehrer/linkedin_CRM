@@ -140,10 +140,12 @@ async function createCRMOverlay() {
         <div class="templates-section">
           <h4>Templates</h4>
           <div class="template-card">
-            <pre class="template-preview">Freut mich mit dir connected zu sein ${profileInfo.firstName}
+            <pre class="template-preview">Freut mich mit dir connected zu sein ${profileInfo.firstName}!
+
+Und sorry für die verzögerte Nachricht. Ich baue mir gerade schon eine LinkedIn Erweiterung, die verhindert, dass Kontakte und Nachrichten untergehen. :D 
 
 Habt ihr schon irgendwelche AI Themen integriert. 
-Guten Start in den Tag
+Guten Start in die Woche. 
 Gruß
 Julien</pre>
             <button class="copy-template-btn" title="Copy to clipboard">

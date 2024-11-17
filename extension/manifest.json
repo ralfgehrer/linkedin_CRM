@@ -7,7 +7,7 @@
     "activeTab",
     "storage",
     "scripting",
-    "microphone"
+    "tabCapture"
   ],
   "host_permissions": [
     "https://*.linkedin.com/*",
