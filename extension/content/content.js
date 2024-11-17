@@ -469,10 +469,13 @@ Julien</pre>
 
     // Add this in your event listeners section
     document.querySelector('.copy-template-btn').addEventListener('click', () => {
-      const templateText = `Freut mich mit dir connected zu sein ${profileInfo.firstName}
+      const templateText = `Freut mich mit dir connected zu sein ${profileInfo.firstName}!
+
+Und sorry für die verzögerte Nachricht. Ich baue mir gerade schon eine LinkedIn Erweiterung, die verhindert, dass Kontakte und Nachrichten untergehen. :D 
 
 Habt ihr schon irgendwelche AI Themen integriert. 
-Guten Start in den Tag
+
+Guten Start in die Woche. 
 Gruß
 Julien`;
       copyTemplateToClipboard(templateText, profileInfo.firstName);

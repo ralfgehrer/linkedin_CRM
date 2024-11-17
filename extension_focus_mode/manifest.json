@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "LinkedIn Focus Mode",
+  "version": "1.0",
+  "description": "Distraction-free mode for LinkedIn feed",
+  "permissions": [
+    "activeTab",
+    "storage"
+  ],
+  "host_permissions": [
+    "https://*.linkedin.com/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://www.linkedin.com/feed/"],
+      "js": ["content/feed.js"],
+      "css": ["content/feed.css"]
+    }
+  ],
+  "action": {
+    "default_popup": "popup/popup.html"
+  }
+} 
