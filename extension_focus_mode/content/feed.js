@@ -118,7 +118,14 @@ function hideReactionPosts() {
         header.textContent.includes('celebrates this') ||
         header.textContent.includes('follows') ||
         header.textContent.includes('connections follow') ||
-        header.textContent.includes('reposted')) {
+        header.textContent.includes('supports this') ||
+        header.textContent.includes('reposted') ||
+        // German translations
+        header.textContent.includes('gefällt das') ||
+        header.textContent.includes('Kontakte folgen') ||
+        header.textContent.includes('kommentiert') ||
+        header.textContent.includes('applaudiert') ||
+        header.textContent.includes('folgt')) {
       // Find the parent post container and hide it
       const postContainer = header.closest('.feed-shared-update-v2');
       if (postContainer) {
