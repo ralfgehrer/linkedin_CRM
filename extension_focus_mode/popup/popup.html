@@ -9,10 +9,27 @@
       font-family: Arial, sans-serif;
     }
     
+    .title {
+      color: #0a66c2;
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 15px;
+      text-align: center;
+      padding-bottom: 10px;
+      border-bottom: 1px solid #eee;
+    }
+    
     .toggle-container {
       display: flex;
       align-items: center;
       gap: 10px;
+      margin-bottom: 10px;
+      padding: 5px 0;
+      border-bottom: 1px solid #eee;
+    }
+    
+    .toggle-container:last-child {
+      border-bottom: none;
     }
     
     .switch {
@@ -67,12 +84,27 @@
   </style>
 </head>
 <body>
+  <div class="title">LinkedIn Focus</div>
   <div class="toggle-container">
     <label class="switch">
       <input type="checkbox" id="focus-mode">
       <span class="slider"></span>
     </label>
     <span class="toggle-label">Focus Mode</span>
+  </div>
+  <div class="toggle-container">
+    <label class="switch">
+      <input type="checkbox" id="hide-promoted">
+      <span class="slider"></span>
+    </label>
+    <span class="toggle-label">Hide Promoted Posts</span>
+  </div>
+  <div class="toggle-container">
+    <label class="switch">
+      <input type="checkbox" id="hide-reactions">
+      <span class="slider"></span>
+    </label>
+    <span class="toggle-label">Hide Reaction Posts</span>
   </div>
   <script src="popup.js"></script>
 </body>

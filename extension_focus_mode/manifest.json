@@ -5,18 +5,26 @@
   "description": "Distraction-free mode for LinkedIn feed",
   "permissions": [
     "activeTab",
-    "storage"
+    "storage",
+    "scripting",
+    "tabs"
   ],
   "host_permissions": [
     "https://*.linkedin.com/*"
   ],
   "content_scripts": [
     {
-      "matches": ["https://www.linkedin.com/feed/"],
+      "matches": [
+        "https://www.linkedin.com/feed*",
+        "https://www.linkedin.com/feed/*"
+      ],
       "js": ["content/feed.js"],
       "css": ["content/feed.css"]
     }
   ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "action": {
     "default_popup": "popup/popup.html"
   }
