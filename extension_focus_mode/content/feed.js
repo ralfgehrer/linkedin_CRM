@@ -70,7 +70,7 @@ function toggleFeedOverlay(enabled) {
 function hidePromotedPosts() {
   const promotedPosts = document.querySelectorAll('.update-components-actor__description');
   promotedPosts.forEach(element => {
-    if (element.textContent.includes('Promoted')) {
+    if (element.textContent.includes('Promoted') || element.textContent.includes('Anzeige')) {
       const postContainer = element.closest('.feed-shared-update-v2');
       if (postContainer) {
         postContainer.style.display = 'none';
