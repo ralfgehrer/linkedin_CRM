@@ -7,13 +7,9 @@ function createFeedOverlay() {
     left: 0;
     right: 0;
     bottom: 0;
-    background: linear-gradient(135deg, 
-      #4a90e2,  /* Lighter blue */
-      #5fb7d4,  /* Turquoise */
-      #4a90e2   /* Back to lighter blue */
-    );
+    background: #f5f8fa;
     display: flex;
-    align-items: center;
+    align-items: flex-start;
     justify-content: center;
     z-index: 90;
     opacity: 0;
@@ -22,27 +18,21 @@ function createFeedOverlay() {
 
   const content = document.createElement('div');
   content.style.cssText = `
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    color: white;
-    font-size: 72px;
-    font-family: 'Playfair Display', Georgia, serif;
+    margin-top: 48px;
+    color: rgba(0, 0, 0, 0.9);
+    font-size: 24px;
+    font-family: -apple-system, system-ui, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
     text-align: center;
-    letter-spacing: 8px;
-    text-transform: uppercase;
-    font-weight: 300;
-    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    letter-spacing: 0.5px;
+    font-weight: 400;
+    line-height: 1.4;
   `;
   
-  // Load Google Font
-  const fontLink = document.createElement('link');
-  fontLink.href = 'https://fonts.googleapis.com/css2?family=Playfair+Display:wght@300&display=swap';
-  fontLink.rel = 'stylesheet';
-  document.head.appendChild(fontLink);
+  content.innerHTML = `
+    <div style="opacity: 0.9">Focus Mode Active</div>
+    <div style="font-size: 16px; margin-top: 8px; opacity: 0.6">Take a moment to concentrate on what matters</div>
+  `;
   
-  content.textContent = 'Focus';
   overlay.appendChild(content);
   return overlay;
 }
