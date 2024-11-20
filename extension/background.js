@@ -2,7 +2,7 @@
 chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
   if (request.type === 'saveNotes') {
     // Handle saving notes to backend
-    fetch('http://localhost:5000/notes', {
+    fetch('http://localhost:8000/notes', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

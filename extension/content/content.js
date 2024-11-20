@@ -27,11 +27,11 @@ async function getProfileInfo() {
       .split('/')[0];
     
     // Try both encoded and decoded versions for the API call
-    const response = await fetch(`http://localhost:5000/notes?profile_url=${encodeURIComponent(decodedUrl)}`);
+    const response = await fetch(`http://localhost:8000/notes?profile_url=${encodeURIComponent(decodedUrl)}`);
     
     if (!response.ok) {
       // Try fallback with raw URL if decoded version fails
-      const fallbackResponse = await fetch(`http://localhost:5000/notes?profile_url=${encodeURIComponent(rawUrl)}`);
+      const fallbackResponse = await fetch(`http://localhost:8000/notes?profile_url=${encodeURIComponent(rawUrl)}`);
       if (!fallbackResponse.ok) {
         throw new Error('Failed to fetch profile info');
       }
@@ -246,7 +246,7 @@ Julien</pre>
 
     // Load existing notes from backend
     try {
-      const response = await fetch(`http://localhost:5000/notes?profile_url=${encodeURIComponent(profileInfo.profileUrl)}`);
+      const response = await fetch(`http://localhost:8000/notes?profile_url=${encodeURIComponent(profileInfo.profileUrl)}`);
       const data = await response.json();
       document.getElementById('crm-notes').value = data.notes || '';
       
@@ -367,7 +367,7 @@ Julien</pre>
         }
 
         // Always proceed with getting next profile
-        const nextProfileResponse = await fetch('http://localhost:5000/next-profile');
+        const nextProfileResponse = await fetch('http://localhost:8000/next-profile');
         const nextProfileData = await nextProfileResponse.json();
 
         if (nextProfileData.next_profile_url) {
@@ -426,7 +426,7 @@ Julien</pre>
             
             // Save to backend
             try {
-              const response = await fetch('http://localhost:5000/update-name', {
+              const response = await fetch('http://localhost:8000/update-name', {
                 method: 'POST',
                 headers: {
                   'Content-Type': 'application/json',
@@ -638,7 +638,7 @@ function addVoiceMessageButton(overlay) {
                     dictationArea.textContent = 'Processing voice message...';
 
                     try {
-                        const response = await fetch('http://localhost:5000/process-voice-message', {
+                        const response = await fetch('http://localhost:8000/process-voice-message', {
                             method: 'POST',
                             body: formData
                         });

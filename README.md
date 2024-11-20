@@ -75,7 +75,7 @@ linkedin_crm/
 
 6. Load the initial data:
 
-   Go to Localhost:5000 and load the initial data. Check the console for progress and errors.
+   Go to Localhost:8000 and load the initial data. Check the console for progress and errors.
 
 ## Extension Setup
 
@@ -89,7 +89,7 @@ linkedin_crm/
 Go to https://www.linkedin.com/mypreferences/d/download-my-data and download the connection data. 
 You will get a csv file within 10 min. 
 
-You can then upload the file on localhost:5000
+You can then upload the file on localhost:8000
 
 ## Development
 
